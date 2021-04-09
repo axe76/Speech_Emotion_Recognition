@@ -9,6 +9,7 @@ from sklearn.model_selection import train_test_split
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras import Sequential
 from tensorflow.keras.layers import LSTM,Dropout,Dense
+from tensorflow.keras.callbacks import ModelCheckpoint
 
 from utils import get_data, \
     get_feature_vector_from_mfcc
@@ -43,19 +44,20 @@ model.add(Dense(num_labels, activation='softmax'))
 model.compile(loss='categorical_crossentropy', optimizer='adam',metrics=['accuracy'])
 print(model.summary())
 
-n_epochs = 120
-best_acc = 0
-for i in range(n_epochs):
-            p = np.random.permutation(len(x_train))
-            x_train = x_train[p]
-            y_train = y_train[p]
-            model.fit(x_train, y_train, batch_size=32, epochs=1)
-            loss, acc = model.evaluate(x_test, y_test_train)
-            if acc > best_acc:
-                model.save_weights('best.h5')
+model_checkpoint_callback = ModelCheckpoint(
+    filepath='tmp/checkpoint',
+    save_weights_only=True,
+    monitor='val_accuracy',
+    mode='max',
+    save_best_only=True)
 
+model.fit(x_train,y_train,epochs=100,batch_size=32,validation_data=(x_test,y_test_train),callbacks=[model_checkpoint_callback])
+
+
+model.load_weights('tmp/checkpoint')#'best_model_LSTM.h5'
 model.evaluate(x_test,y_test_train)
 
-model.load_weights('best.h5')#'best_model_LSTM.h5'
-model.evaluate(x_test,y_test_train)
+
+filename = 'dataset/Sad/09b02Tb.wav'
+print('prediction', np.argmax(model.predict(np.array([get_feature_vector_from_mfcc(filename, flatten=False)]))),'Actual 3')
 
